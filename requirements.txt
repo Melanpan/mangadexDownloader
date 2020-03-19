@@ -1,0 +1,6 @@
+coloredlogs>=10.0
+tqdm>=4.36.1
+cloudscraper>=1.2.28
+pathvalidate>=2.2.0
+pushover>=0.5
+PyYAML>=5.3.1
