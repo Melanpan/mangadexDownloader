@@ -1,6 +1,6 @@
 ﻿### Overview
 
-A small program that, when ran as cron, will download the latest chapters from Mangadex and notify you through pushover once they are downloaded. Written in Python3.7 and inspired by frozenpandaman's mangadex-dl.
+A small program that, when ran as cron, will download the latest chapters from Mangadex and notify you through pushover once they are downloaded. Written in Python3.7 and inspired by frozenpandaman's mangadex-dl. It should also work under Windows.
 
 ### Usage
 It currently takes no arguments, just simply run it from the command line or a cron.
@@ -59,4 +59,3 @@ Explanation of the settings
 - You have to tell it what group to download from, otherwise it won't work. In the future I want it to being able to fall back to whatever group once a new chapter is out.
 - It doesn't really handle exceptions well yet.
 - It doesn't actually have any delay between downloading pages and chapters, now this hasn't given me any problems at all, you have been warned.
-- It doesn't work under windows yet

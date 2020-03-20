@@ -6,6 +6,8 @@ import os
 import tqdm
 import pushover
 import re
+import pathlib
+
 from pathvalidate import sanitize_filename
 
 class mangadex():
@@ -28,13 +30,17 @@ class mangadex():
         if self.current_manga['config']['check_last']:
             return
         
-        push = pushover.Client(self.config['pushover']['user'], api_token=self.config['pushover']['token'])
-
-        with open(os.path.join(self.config['downloadpath'], self.current_manga['config']['name'], "cover.jpg"), 'rb') as image:
-             push.send_message(f"New chapter of {self.current_manga['config']['name']}, \
-                                  chapter {chapter_json['chapter']}! Title: {chapter_json['title']}", 
-                                  attachment=image)
-    
+        push = pushover.Client(self.config['pushover']['user'], api_token=self.config['pushover']['token']) 
+        coverPath = pathlib.Path(self.config['downloadpath']).joinpath(self.current_manga['config']['name']).joinpath("cover.jpg")
+        if coverPath.exists():
+            with open(coverPath, 'rb') as image:
+                push.send_message(f"New chapter of {self.current_manga['config']['name']}, \
+                                    chapter {chapter_json['chapter']}! Title: {chapter_json['title']}", 
+                                    attachment=image)
+        else:
+            push.send_message(f"New chapter of {self.current_manga['config']['name']}, \
+                                    chapter {chapter_json['chapter']}! Title: {chapter_json['title']}")
+        
     def get_boolean_option(self, config: dict, option: str, ) -> bool:
         if option in config:
             return config[option]
@@ -53,13 +59,13 @@ class mangadex():
         raise Exception(f"{manga_id} is an invalid mangadex manga")
 
     def get_cover(self):
-        cover_image = os.path.join(self.config['downloadpath'], self.current_manga['config']['name'], "cover.jpg")
+        coverPath = pathlib.Path(self.config['downloadpath']).joinpath(self.current_manga['config']['name']).joinpath("cover.jpg")
 
-        if not os.path.exists(cover_image):
+        if not coverPath.exists():
             resp = self.scraper.get(f"https://mangadex.org/{self.current_manga['json']['manga']['cover_url']}")
             
             if resp.status_code == 200:
-                with open(cover_image, "wb") as fout:
+                with open(coverPath, "wb") as fout:
                     fout.write(resp.content)
 
     def get_chapters(self, lang: str) -> list:
@@ -82,15 +88,15 @@ class mangadex():
     
     
     def download_chapter(self, chapter: dict): 
-        chapter_path = os.path.join(self.config['downloadpath'], self.current_manga['config']['name'])
+        chapter_path = pathlib.Path(self.config['downloadpath']).joinpath(self.current_manga['config']['name'])
         
         if self.get_boolean_option(self.config['naming'], "volumes"):
             if chapter["volume"] == "":
-                chapter_path = os.path.join(chapter_path, f"Unknown volume")
+               chapter_path.joinpath("Unknown volume")
             else:
-                chapter_path = os.path.join(chapter_path, f"Volume {chapter['volume']}")
+                chapter_path.joinpath(f"Volume {chapter['volume']}")
             
-        chapter_path = os.path.join(chapter_path, f"Chapter {chapter['chapter']} [{sanitize_filename(chapter['group_name'])}]")
+        chapter_path = chapter_path.joinpath(f"Chapter {chapter['chapter']} [{sanitize_filename(chapter['group_name'])}]")
         os.makedirs(chapter_path, exist_ok=True)
         
         chapter_json = self.scraper.get(f"https://mangadex.org/api/chapter/{chapter['id']}/").json()
@@ -105,12 +111,12 @@ class mangadex():
         total_pages_number = len(str(len(chapter_json['page_array'])))
         for image in chapter_json['page_array']:
             image_url = f"{chapter_json['server']}{chapter_json['hash']}/{image}"
-            image_ext = os.path.splitext(image)[-1]
+            image_ext = pathlib.Path(image).suffix
             
             page_num = re.findall('([\d]+)', image)[0].zfill(total_pages_number)
-            image_path = os.path.join(chapter_path, f"{page_num}{image_ext}")
-
-            if not os.path.exists(image_path):
+            image_path = pathlib.Path(chapter_path.joinpath(f"{page_num}{image_ext}"))
+            
+            if not image_path.exists():
                 resp = self.scraper.get(image_url)
             
                 with open(image_path, "wb") as fout:
@@ -134,7 +140,8 @@ class mangadex():
         self.current_manga['config'] = manga_config
         self.current_manga['json'] = self.api_get_manga(manga_config['id'])
 
-        os.makedirs(os.path.join(self.config['downloadpath'], manga_config['name']), exist_ok=True)
+        downloadPath = pathlib.Path(self.config['downloadpath']).joinpath(manga_config['name'])
+        downloadPath.mkdir(parents=True, exist_ok=True)
 
         if self.get_boolean_option(manga_config, "cover"):
             self.get_cover()
